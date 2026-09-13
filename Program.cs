@@ -37,7 +37,6 @@ namespace IngameScript
         string ammoTag = "[Ammo]";
         string elseTag = "[Else]";
         string overflowTag = "[Overflow]";
-        string refineTag = "[Refine]";
 
         // Cargo Scan Management
         class CargoContainer
@@ -151,8 +150,7 @@ namespace IngameScript
             GridTerminalSystem.GetBlocksOfType(taggedCargos,
                 container => (container.CustomName.Contains(oresTag) || container.CustomName.Contains(ingotsTag) ||
                               container.CustomName.Contains(componentsTag) || container.CustomName.Contains(ammoTag) ||
-                              container.CustomName.Contains(elseTag)) || container.CustomName.Contains(overflowTag) ||
-                              container.CustomName.Contains(refineTag));
+                              container.CustomName.Contains(elseTag)) || container.CustomName.Contains(overflowTag));
 
             foreach (var cargoContainer in taggedCargos)
             {
@@ -181,13 +179,6 @@ namespace IngameScript
                 {
                     managedCargo.OverflowFlag = true;
                     overflowCargo = managedCargo.Container;
-                }
-
-                if (cargoContainer.CustomName.Contains(refineTag))
-                {
-                    managedCargo.RefineFlag = true;
-                    refineCargo = managedCargo.Container;
-                    refineInventory = managedCargo.Inventory;
                 }
 
                 managedCargos.Add(managedCargo);
