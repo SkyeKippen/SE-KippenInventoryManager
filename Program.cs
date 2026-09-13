@@ -26,18 +26,18 @@ namespace IngameScript
     public partial class Program : MyGridProgram
     {
         // Version (Used for display)
-        string version = "v0.3.0";
+        string version = "v0.4.0";
 
         // Keyword management
         string lcdKeyword = "[KIM]";
         string lcdDebugKeyword = "[KIM Debug]";
-        string noKimTag = "[NK]";
         string oresTag = "[Ores]";
         string ingotsTag = "[Ingots]";
         string componentsTag = "[Components]";
         string ammoTag = "[Ammo]";
         string elseTag = "[Else]";
         string overflowTag = "[Overflow]";
+        string refineTag = "[Refine]";
 
         // Cargo Scan Management
         class CargoContainer
@@ -50,9 +50,12 @@ namespace IngameScript
             public bool AmmoFlag = false;
             public bool ElseFlag = false;
             public bool OverflowFlag = false;
+            public bool RefineFlag = false;
         }
         
         List<CargoContainer> managedCargos = new List<CargoContainer>();
+        
+        
         
         // Setup Item Categories: {Ores, Ingots, Components, Ammo, Else}
         static string GetItemCategory(MyItemType type)
@@ -96,6 +99,9 @@ namespace IngameScript
         private Queue<string> taskLog = new Queue<string>();
         private int maxTaskLogEntries = 25;
         int taskIndex = 0;
+
+        IMyCargoContainer refineCargo;
+        IMyInventory refineInventory;
 
         public Program()
         {
@@ -145,7 +151,8 @@ namespace IngameScript
             GridTerminalSystem.GetBlocksOfType(taggedCargos,
                 container => (container.CustomName.Contains(oresTag) || container.CustomName.Contains(ingotsTag) ||
                               container.CustomName.Contains(componentsTag) || container.CustomName.Contains(ammoTag) ||
-                              container.CustomName.Contains(elseTag)) || container.CustomName.Contains(overflowTag));
+                              container.CustomName.Contains(elseTag)) || container.CustomName.Contains(overflowTag) ||
+                              container.CustomName.Contains(refineTag));
 
             foreach (var cargoContainer in taggedCargos)
             {
@@ -176,6 +183,13 @@ namespace IngameScript
                     overflowCargo = managedCargo.Container;
                 }
 
+                if (cargoContainer.CustomName.Contains(refineTag))
+                {
+                    managedCargo.RefineFlag = true;
+                    refineCargo = managedCargo.Container;
+                    refineInventory = managedCargo.Inventory;
+                }
+
                 managedCargos.Add(managedCargo);
             }
             
@@ -189,7 +203,8 @@ namespace IngameScript
         
         public void Main(string argument, UpdateType updateSource)
         {
-            Echo($"Kippen Inventory Manager (KIM) {version}...");
+            Echo($"Kippen Inventory Manager (KIM) {version}...\n");
+            Echo($"Tracked Cargos: {managedCargos.Count}");
             
             if (stateMachine == null)
                 stateMachine = RunStuffOverTime();
@@ -241,7 +256,7 @@ namespace IngameScript
                 for (var i = items.Count - 1; i >= 0; i--)
                 {
                     var itemCategory = GetItemCategory(items[i].Type);
-                    if (itemCategory == "Ores" && managedCargo.OresFlag) continue;
+                    if (itemCategory == "Ores" && (managedCargo.OresFlag || managedCargo.RefineFlag)) continue;
                     if (itemCategory == "Ingots" && managedCargo.IngotsFlag) continue;
                     if (itemCategory == "Components" && managedCargo.ComponentsFlag) continue;
                     if (itemCategory == "Ammo" && managedCargo.AmmoFlag) continue;
@@ -253,7 +268,6 @@ namespace IngameScript
                             items[i].Amount);
                     }
 
-                    
                 }
                 
                 yield return true;
@@ -393,7 +407,6 @@ namespace IngameScript
         
         void StartTask(string taskName, int index)
         {
-            Echo($"Starting Task: {taskName}");
             taskLog.Enqueue(taskName);
             if (taskLog.Count > maxTaskLogEntries)
             {
